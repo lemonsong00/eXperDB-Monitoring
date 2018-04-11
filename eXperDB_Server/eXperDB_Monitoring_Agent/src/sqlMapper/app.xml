@@ -969,39 +969,45 @@
 		 SELECT /* EXPERDBMABT_ACCESS_INFO_001 24e9ab7301ff1966da4fb30dc1538882 */                                                                                                                                                                              
 		        --? AS REG_DATE, --@ TO_CHAR(NOW(), 'YYYYMMDD')                                                                                                                                                           
 		        --? AS OBJT_REG_SEQ, --@NEXTVAL('OBJT_REG_SEQ')                                                                                                                                                           
-		        #{db_name} AS DB_NAME, -- @DATNAME                                                                                                                                                                        
-		        PG_DATABASE_SIZE(#{datid})/1024 AS DB_SIZE_KB, -- @DATID                                                                                                                                                  
-		        COUNT(A.RELID) AS TABLE_CNT,                                                                                                                                                                              
-		        (SELECT COUNT(INDEXRELID) FROM PG_STAT_USER_INDEXES) AS INDEX_CNT,                                                                                                                                         
+		        #{db_name}                         AS DB_NAME, -- @DATNAME                                                                                                                                                                        
+		        PG_DATABASE_SIZE(#{datid})/1024    AS DB_SIZE_KB, -- @DATID                                                                                                                                                  
+		        COUNT(A.RELID)                     AS TABLE_CNT,                                                                                                                                                                              
+		        MAX(IDX.INDEXRELID)                AS INDEX_CNT,                                                                                                                                         
 		        COALESCE(SUM(A.HEAP_BLKS_READ), 0) AS AGG_HEAP_BLKS_READ_KB,                                                                                                                                                           
-		        COALESCE(SUM(A.HEAP_BLKS_HIT), 0) AS AGG_HEAP_BLKS_HIT_KB,                                                                                                                                                             
-		        COALESCE(SUM(B.SEQ_TUP_READ), 0) AS AGG_SEQ_READ_TUPLES,                                                                                                                                                               
-		        COALESCE(SUM(B.IDX_TUP_FETCH), 0) AS AGG_IDX_FETCH_TUPLES,
-	          	COALESCE(SUM(B.n_tup_ins), 0) AS AGG_INSERT_TUPLES,-- insert
-	          	COALESCE(SUM(B.n_tup_upd), 0) AS AGG_UPDATE_TUPLES,-- update
-	          	COALESCE(SUM(B.n_tup_del), 0) AS AGG_DELETE_TUPLES,-- delete
-		        COALESCE(SUM(B.SEQ_SCAN), 0) AS AGG_SEQ_SCAN_CNT,
-		        COALESCE(SUM(B.IDX_SCAN), 0) AS AGG_IDX_SCAN_CNT,	          	
-	          	(SELECT XACT_COMMIT FROM PG_STAT_DATABASE WHERE DATNAME=CURRENT_DATABASE()) AS AGG_COMMIT,
-	          	(SELECT XACT_ROLLBACK FROM PG_STAT_DATABASE WHERE DATNAME=CURRENT_DATABASE()) AS AGG_ROLLBACK,		        
+		        COALESCE(SUM(A.HEAP_BLKS_HIT), 0)  AS AGG_HEAP_BLKS_HIT_KB,                                                                                                                                                             
+		        COALESCE(SUM(B.SEQ_TUP_READ), 0)   AS AGG_SEQ_READ_TUPLES,                                                                                                                                                               
+		        COALESCE(SUM(B.IDX_TUP_FETCH), 0)  AS AGG_IDX_FETCH_TUPLES,
+	          	COALESCE(SUM(B.n_tup_ins), 0)      AS AGG_INSERT_TUPLES,-- insert
+	          	COALESCE(SUM(B.n_tup_upd), 0)      AS AGG_UPDATE_TUPLES,-- update
+	          	COALESCE(SUM(B.n_tup_del), 0)      AS AGG_DELETE_TUPLES,-- delete
+		        COALESCE(SUM(B.SEQ_SCAN), 0)       AS AGG_SEQ_SCAN_CNT,
+		        COALESCE(SUM(B.IDX_SCAN), 0)       AS AGG_IDX_SCAN_CNT,	          	
+	          	MAX(D.XACT_COMMIT)                 AS AGG_COMMIT,
+	          	MAX(D.XACT_ROLLBACK)               AS AGG_ROLLBACK,		        
 		        COALESCE(SUM(HEAP_BLKS_READ), 0) - #{agg_heap_blks_read_kb} AS CURRENT_HEAP_BLKS_READ_KB, -- @이전값                                                                                                               
-		        COALESCE(SUM(HEAP_BLKS_HIT), 0) - #{agg_heap_blks_hit_kb} AS CURRENT_HEAP_BLKS_HIT_KB, -- @이전값                                                                                                                  
-		        COALESCE(SUM(B.SEQ_TUP_READ), 0) - #{agg_seq_read_tuples} AS CURRENT_SEQ_READ_TUPLES, -- @이전값 (AGG_SEQ_READ_TUPLES 의 current value)                                                                            
+		        COALESCE(SUM(HEAP_BLKS_HIT), 0) - #{agg_heap_blks_hit_kb}   AS CURRENT_HEAP_BLKS_HIT_KB, -- @이전값                                                                                                                  
+		        COALESCE(SUM(B.SEQ_TUP_READ), 0) - #{agg_seq_read_tuples}   AS CURRENT_SEQ_READ_TUPLES, -- @이전값 (AGG_SEQ_READ_TUPLES 의 current value)                                                                            
 		        COALESCE(SUM(B.IDX_TUP_FETCH), 0) - #{agg_idx_fetch_tuples} AS CURRENT_IDX_FETCH_TUPLES, -- @이전값 (AGG_IDX_FETCH_TUPLES의 current value)
-   	            COALESCE(SUM(B.n_tup_ins), 0) - #{agg_insert_tuples} AS CURRENT_INSERT_TUPLES,-- insert
-	            COALESCE(SUM(B.n_tup_upd), 0) - #{agg_update_tuples} AS CURRENT_UPDATE_TUPLES,-- update
-	            COALESCE(SUM(B.n_tup_del), 0) - #{agg_delete_tuples} AS CURRENT_DELETE_TUPLES,-- delete
-        		COALESCE(SUM(B.SEQ_SCAN), 0) - #{agg_seq_scan_cnt} AS CURRENT_SEQ_SCAN_CNT,
-          		COALESCE(SUM(B.IDX_SCAN), 0) - #{agg_idx_scan_cnt} AS CURRENT_IDX_SCAN_CNT,
-	            (SELECT XACT_COMMIT FROM PG_STAT_DATABASE WHERE DATNAME=CURRENT_DATABASE()) - #{agg_commit} as CURRENT_COMMIT,
-	            (SELECT XACT_ROLLBACK FROM PG_STAT_DATABASE WHERE DATNAME=CURRENT_DATABASE()) - #{agg_rollback} as CURRENT_ROLLBACK,		        
+   	                COALESCE(SUM(B.n_tup_ins), 0) - #{agg_insert_tuples}        AS CURRENT_INSERT_TUPLES,-- insert
+	                COALESCE(SUM(B.n_tup_upd), 0) - #{agg_update_tuples}        AS CURRENT_UPDATE_TUPLES,-- update
+	                COALESCE(SUM(B.n_tup_del), 0) - #{agg_delete_tuples}        AS CURRENT_DELETE_TUPLES,-- delete
+        		COALESCE(SUM(B.SEQ_SCAN), 0) - #{agg_seq_scan_cnt}          AS CURRENT_SEQ_SCAN_CNT,
+          		COALESCE(SUM(B.IDX_SCAN), 0) - #{agg_idx_scan_cnt}          AS CURRENT_IDX_SCAN_CNT,
+	                MAX(D.XACT_COMMIT)           - #{agg_commit}                AS CURRENT_COMMIT,
+	                MAX(D.XACT_ROLLBACK)         - #{agg_rollback}              AS CURRENT_ROLLBACK,		        
 		        --CASE WHEN SUM(A.HEAP_BLKS_HIT)<>0 AND SUM(A.HEAP_BLKS_HIT) > SUM(A.HEAP_BLKS_READ) THEN ROUND((SUM(A.HEAP_BLKS_HIT) - SUM(A.HEAP_BLKS_READ)) / SUM(A.HEAP_BLKS_HIT)*100,2) ELSE 0 END AS BUFFER_HIT_RATIO,
-		        (SELECT CASE WHEN BLKS_HIT = 0 AND BLKS_READ = 0 THEN 0 ELSE TRUNC(((BLKS_HIT::DECIMAL/(BLKS_READ+BLKS_HIT)::DECIMAL) * 100), 2) END AS CACHE_HIT_RATIO FROM PG_STAT_DATABASE WHERE DATNAME=CURRENT_DATABASE()) AS BUFFER_HIT_RATIO,
+		        --(SELECT CASE WHEN BLKS_HIT = 0 AND BLKS_READ = 0 THEN 0 ELSE TRUNC(((BLKS_HIT::DECIMAL/(BLKS_READ+BLKS_HIT)::DECIMAL) * 100), 2) END AS CACHE_HIT_RATIO FROM PG_STAT_DATABASE WHERE DATNAME=CURRENT_DATABASE()) AS BUFFER_HIT_RATIO,
+                        CASE WHEN MAX(D.BLKS_HIT) = 0 AND MAX(D.BLKS_READ) = 0 THEN 0 
+		        ELSE TRUNC(((MAX(D.BLKS_HIT)::DECIMAL/(MAX(D.BLKS_READ)+MAX(D.BLKS_HIT))::DECIMAL) * 100), 2) 
+		        END                                                                        AS CACHE_HIT_RATIO,
 		        --(SELECT ROUND(TOTAL_TIME::NUMERIC/CALLS,5) FROM PG_STAT_STATEMENTS ORDER BY TOTAL_TIME/CALLS DESC LIMIT 1) AS MAX_SQL_ELAPSED_SEC, --NOTICE!! V9.2 : MILLI SEC                                          
 		        --(SELECT ROUND(SUM(TOTAL_TIME::NUMERIC)/SUM(CALLS),5) FROM PG_STAT_STATEMENTS) AS AVG_SQL_ELAPSED_SEC, --NOTICE!! V9.2 : MILLI SEC                                                                       
 		        NOW() AS COLLECT_DT,
 		        EXTRACT(EPOCH FROM NOW()-#{collect_dt})::NUMERIC(10,3) AS DELTA_TIME
-		FROM PG_STATIO_USER_TABLES A, PG_STAT_USER_TABLES B WHERE A.RELNAME=B.RELNAME
+		FROM    PG_STATIO_USER_TABLES A, PG_STAT_USER_TABLES B ,
+		        (SELECT COUNT(INDEXRELID) AS INDEXRELID FROM PG_STAT_USER_INDEXES ) IDX,
+		        (SELECT XACT_COMMIT, XACT_ROLLBACK,BLKS_HIT, BLKS_READ FROM PG_STAT_DATABASE WHERE DATNAME = CURRENT_DATABASE()) D         
+                WHERE   A.RELNAME=B.RELNAME
 		]]>
 	</select>
 	
